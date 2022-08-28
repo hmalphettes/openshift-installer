@@ -40,11 +40,12 @@ type TFVarsSources struct {
 	Cluster             string
 	ImageURL            string
 	PreexistingFolder   bool
+	PreexistingTag      bool
 	DiskType            vtypes.DiskType
 	NetworkID           string
 }
 
-//TFVars generate vSphere-specific Terraform variables
+// TFVars generate vSphere-specific Terraform variables
 func TFVars(sources TFVarsSources) ([]byte, error) {
 	controlPlaneConfig := sources.ControlPlaneConfigs[0]
 

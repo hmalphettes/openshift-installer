@@ -757,6 +757,11 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 		// Set this flag to use an existing folder specified in the install-config. Otherwise, create one.
 		preexistingFolder := installConfig.Config.Platform.VSphere.Folder != ""
 
+		// Set this flag to use an existing tag specified instead of creating them.
+		// for now just read the fact that the infra id was not generated with a random suffix
+		// and assume that if we went to such pain it is because we cannot create the tag
+		preexistingTag := installConfig.Config.Platform.VSphere.PreexistingTag || os.Getenv("INFRA_ID") != ""
+
 		// Must use the Managed Object ID for a port group (e.g. dvportgroup-5258)
 		// instead of the name since port group names aren't always unique in vSphere.
 		// https://bugzilla.redhat.com/show_bug.cgi?id=1918005
@@ -789,6 +794,7 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 				Cluster:             installConfig.Config.VSphere.Cluster,
 				ImageURL:            string(*rhcosImage),
 				PreexistingFolder:   preexistingFolder,
+				PreexistingTag:      preexistingTag,
 				DiskType:            installConfig.Config.Platform.VSphere.DiskType,
 				NetworkID:           networkID,
 			},

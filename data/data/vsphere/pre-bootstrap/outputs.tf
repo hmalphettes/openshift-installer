@@ -39,5 +39,5 @@ output "cluster_id" {
 }
 
 output "tags" {
-  value = [vsphere_tag.tag.id]
+  value = [var.vsphere_preexisting_tag ? data.vsphere_tag.tag.id : vsphere_tag.tag.id]
 }

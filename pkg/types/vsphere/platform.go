@@ -71,6 +71,9 @@ type Platform struct {
 	// virtual machines. The absolute path is of the form /<datacenter>/vm/<folder>/<subfolder>.
 	Folder string `json:"folder,omitempty"`
 
+	// True to lookup an existing tag
+	PreexistingTag bool `json:"preExistingTag,omitempty"`
+
 	// Cluster is the name of the cluster virtual machines will be cloned into.
 	Cluster string `json:"cluster,omitempty"`
 

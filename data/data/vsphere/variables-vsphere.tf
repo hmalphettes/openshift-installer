@@ -62,6 +62,11 @@ variable "vsphere_preexisting_folder" {
   description = "If false, creates a top-level folder with the name from vsphere_folder_rel_path."
 }
 
+variable "vsphere_preexisting_tag" {
+  type        = bool
+  description = "If false, creates a tag with openshift-{cluster_id}"
+}
+
 ///////////
 // Control Plane machine variables
 ///////////

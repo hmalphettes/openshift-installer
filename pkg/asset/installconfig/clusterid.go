@@ -2,6 +2,9 @@ package installconfig
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -24,6 +27,13 @@ type ClusterID struct {
 	// This does not have
 	InfraID string
 }
+
+var (
+	// replace all characters that are not `alphanum` or `-` with `-`
+	re = regexp.MustCompile("[^A-Za-z0-9-]")
+	// replace all multiple dashes in a sequence with single one.
+	re2 = regexp.MustCompile(`-{2,}`)
+)
 
 var _ asset.Asset = (*ClusterID)(nil)
 
@@ -54,26 +64,74 @@ func (a *ClusterID) Name() string {
 	return "Cluster ID"
 }
 
+// All characters that are not alphanum are replaced by '-'
+// consecutive '-' are collapsed and '-' are trimmed from the right
+func normalizeString(raw string) string {
+	normalized := re.ReplaceAllString(raw, "-")
+	normalized = re2.ReplaceAllString(normalized, "-")
+	if len(normalized) == 0 || normalized == "-" {
+		panic(fmt.Sprintf("Invalid input string \"%s\". It must contain at least 1 alphanum character", raw))
+	}
+	normalized = strings.TrimRight(normalized, "-")
+	return normalized
+}
+
+func lookupPredefinedValue(envName string) string {
+	value := os.Getenv(envName)
+	if value == "" {
+		dotFileName := fmt.Sprintf(".%s", strings.ToLower(envName))
+		if _, err := os.Stat(dotFileName); err == nil {
+			raw, _ := ioutil.ReadFile(dotFileName)
+			value = string(raw)
+		}
+	}
+	if value == "" || strings.ToLower(value) == "false" {
+		return ""
+	}
+	if value == "." {
+		value, _ = os.Getwd()
+		value = filepath.Base(value)
+	}
+	value = normalizeString(value)
+	return value
+}
+
+func truncate(value string, maxLen int) string {
+	// truncate to maxBaseLen
+	if len(value) > maxLen {
+		value = value[:maxLen]
+	}
+	return strings.TrimRight(value, "-")
+}
+
 // generateInfraID take base and returns a ID that
 // - is of length maxLen
 // - only contains `alphanum` or `-`
 func generateInfraID(base string, maxLen int) string {
+	preGeneratedInfraID := lookupPredefinedValue("INFRA_ID")
+	if preGeneratedInfraID != "" {
+		infraID := normalizeString(preGeneratedInfraID)
+		os.Setenv("INFRA_ID", infraID)
+		return infraID
+	}
+
+	// normalize early to maximum the number of meaningful characters extracted
+	base = normalizeString(base)
 	maxBaseLen := maxLen - (randomLen + 1)
 
-	// replace all characters that are not `alphanum` or `-` with `-`
-	re := regexp.MustCompile("[^A-Za-z0-9-]")
-	base = re.ReplaceAllString(base, "-")
-
-	// replace all multiple dashes in a sequence with single one.
-	re = regexp.MustCompile(`-{2,}`)
-	base = re.ReplaceAllString(base, "-")
-
 	// truncate to maxBaseLen
-	if len(base) > maxBaseLen {
-		base = base[:maxBaseLen]
+	base = truncate(base, maxBaseLen)
+
+	suffix := lookupPredefinedValue("INFRA_ID_SUFFIX")
+	if suffix != "" {
+		infraID := fmt.Sprintf("%s-%s", base, suffix)
+		infraID = truncate(infraID, maxLen)
+		os.Setenv("INFRA_ID", infraID)
+		return infraID
+	} else {
+		suffix = utilrand.String(randomLen)
 	}
-	base = strings.TrimRight(base, "-")
 
 	// add random chars to the end to randomize
-	return fmt.Sprintf("%s-%s", base, utilrand.String(randomLen))
+	return fmt.Sprintf("%s-%s", base, suffix)
 }

@@ -54,6 +54,7 @@ resource "vsphereprivate_import_ova" "import" {
 }
 
 resource "vsphere_tag_category" "category" {
+  count       = var.vsphere_preexisting_tag ? 0 : 1
   name        = "openshift-${var.cluster_id}"
   description = "Added by openshift-install do not remove"
   cardinality = "SINGLE"
@@ -68,9 +69,21 @@ resource "vsphere_tag_category" "category" {
 }
 
 resource "vsphere_tag" "tag" {
+  count       = var.vsphere_preexisting_tag ? 0 : 1
   name        = var.cluster_id
   category_id = vsphere_tag_category.category.id
   description = "Added by openshift-install do not remove"
+}
+
+data "vsphere_tag_category" "category" {
+  count = var.vsphere_preexisting_tag ? 1 : 0
+  name  = "openshift-${var.cluster_id}"
+}
+
+data "vsphere_tag" "tag" {
+  count       = var.vsphere_preexisting_tag ? 1 : 0
+  name        = var.cluster_id
+  category_id = data.vsphere_tag_category.category.id
 }
 
 resource "vsphere_folder" "folder" {
